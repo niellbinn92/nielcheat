@@ -6,6 +6,9 @@
 <title>Panel Admin NIELofc</title>
 <script src="https://cdn.tailwindcss.com"></script>
 <script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
+<link rel="icon" href="logo.png" type="image/png">
+<link rel="apple-touch-icon" href="logo.png">
+<meta name="theme-color" content="#2563EB">
 <link href="https://fonts.googleapis.com/css2?family=Poppins:wght@600;700;800&family=Orbitron:wght@700;900&display=swap" rel="stylesheet">
 <style>
 body{font-family:'Poppins', sans-serif;color:#fff;overflow-x:hidden;background:#050A14;}
@@ -15,6 +18,8 @@ h1,h2{font-family:'Orbitron', sans-serif;}
               radial-gradient(circle at 80% 80%, #3B82F633 0%, transparent 50%),#050A14;
   animation:bgMove 15s ease-in-out infinite alternate;}
 @keyframes bgMove{0%{background-position:0% 0%, 100% 100%;}100%{background-position:100% 100%, 0% 0%;}}
+@keyframes blink {0%,100%{box-shadow:0 0 5px #10B981;}50%{box-shadow:0 0 15px #10B981;}}
+@keyframes blinkOff {0%,100%{box-shadow:0 0 5px #EF4444;}50%{box-shadow:0 0 15px #EF4444;}}
 .card{background:#0F172A90;backdrop-filter:blur(10px);border:1px solid #2563EB;border-radius:16px;padding:16px;margin-bottom:16px;box-shadow:0 0 15px #2563EB40}
 .input{background:#050A14;border:1px solid #2563EB;border-radius:10px;padding:10px;width:100%;color:#fff;margin-bottom:10px}
 .btn{padding:10px 14px;border-radius:10px;font-weight:800;cursor:pointer;transition:0.2s}
@@ -33,6 +38,13 @@ h1,h2{font-family:'Orbitron', sans-serif;}
 .proses{background:#3B82F630;color:#3B82F6}
 .selesai{background:#10B98130;color:#10B981}
 .stat-box{background:#1E293B;border:1px solid #2563EB;border-radius:12px;padding:12px;text-align:center}
+
+/* INDIKATOR ON OFF */
+.produk-card{position:relative;background:#1E293B;border:2px solid #2563EB;border-radius:12px;padding:10px;margin-bottom:12px}
+.indicator{position:absolute;top:8px;right:8px;width:12px;height:12px;border-radius:50%;}
+.indicator.on{background:#10B981;animation:blink 1.2s infinite;}
+.indicator.off{background:#EF4444;animation:blinkOff 1.2s infinite;}
+.toggle-btn{font-size:11px;padding:4px 8px;border-radius:6px;margin-top:6px}
 </style>
 </head>
 <body>
@@ -53,11 +65,17 @@ h1,h2{font-family:'Orbitron', sans-serif;}
     <!-- STATISTIK -->
     <div class="grid grid-cols-3 gap-3 mb-4">
       <div class="stat-box"><p class="text-xs text-gray-400">TOTAL</p><p id="totalAll" class="text-2xl font-bold">0</p></div>
-      <div class="stat-box"><p class="text-xs text-gray-400">PROSES</p><p id="totalProses" class="text-2xl font-bold text-yellow-400">0</p></div>
-      <div class="stat-box"><p class="text-xs text-gray-400">SELESAI</p><p id="totalSelesai" class="text-2xl font-bold text-green-400">0</p></div>
+      <div class="stat-box"><p class="text-xs text-gray-400">ON</p><p id="totalOn" class="text-2xl font-bold text-green-400">0</p></div>
+      <div class="stat-box"><p class="text-xs text-gray-400">OFF</p><p id="totalOff" class="text-2xl font-bold text-red-400">0</p></div>
     </div>
 
-    <!-- FORM -->
+    <!-- MANAJEMEN PRODUK -->
+    <div class="card">
+      <h2 class="font-bold mb-3">⚙️ Atur Status Produk</h2>
+      <div id="produkManager" class="space-y-2"></div>
+    </div>
+
+    <!-- FORM PESAN -->
     <div class="card">
       <h2 class="font-bold mb-3">+ Tambah Pesanan Baru</h2>
       <input id="nama" type="text" placeholder="Nama Pembeli" class="input">
@@ -80,7 +98,7 @@ h1,h2{font-family:'Orbitron', sans-serif;}
       </div>
     </div>
 
-    <!-- LIST -->
+    <!-- LIST PESANAN -->
     <h2 class="font-bold mb-3">Daftar Pesanan</h2>
     <div id="listOrder"></div>
     <button onclick="logout()" class="btn bg-red-600 w-full mt-4">LOGOUT</button>
@@ -88,39 +106,67 @@ h1,h2{font-family:'Orbitron', sans-serif;}
 </div>
 
 <script>
-const PASS_ADMIN = "220230"; // PASSWORD
+const PASS_ADMIN = "220230";
 
-const PRODUK = [
-  "migul", "hg proxy", "silent cheat", "drip", "fluorite", 
-  "gbox/esing", "king mod", "solana hax", "migul proxy", "drip proxy"
+let produkData = JSON.parse(localStorage.getItem('produk_status_v7')) || [
+  {nama:"migul", on:true}, {nama:"hg proxy", on:true}, {nama:"silent cheat", on:true}, 
+  {nama:"drip", on:true}, {nama:"fluorite", on:false}, 
+  {nama:"gbox/esing", on:true}, {nama:"king mod", on:false}, 
+  {nama:"solana hax", on:true}, {nama:"migul proxy", on:true}, {nama:"drip proxy", on:true}
 ];
 
-let orders = JSON.parse(localStorage.getItem('panel_orders_v6_1')) || [];
+let orders = JSON.parse(localStorage.getItem('panel_orders_v7')) || [];
 let produkPilih = '';
 
 function loginAdmin(){
   if(document.getElementById('passAdmin').value == PASS_ADMIN){
     document.getElementById('loginBox').classList.add('hidden');
     document.getElementById('panelBox').classList.remove('hidden');
-    renderProduk(); render();
+    renderProdukManager(); renderProduk(); render();
   } else { alert('Password salah!'); }
 }
 function logout(){ location.reload(); }
+function saveProduk(){ localStorage.setItem('produk_status_v7', JSON.stringify(produkData)); }
+function save(){ localStorage.setItem('panel_orders_v7', JSON.stringify(orders)); render(); }
+
+function toggleProduk(nama){
+  const p = produkData.find(x=>x.nama==nama);
+  p.on = !p.on; saveProduk(); renderProdukManager(); renderProduk();
+}
+
+// MANAGER PRODUK DENGAN LAMPU
+function renderProdukManager(){
+  const wrap = document.getElementById('produkManager');
+  wrap.innerHTML = '';
+  let totalOn = 0;
+  produkData.forEach(p=>{
+    if(p.on) totalOn++;
+    wrap.innerHTML += `
+    <div class="produk-card">
+      <div class="indicator ${p.on?'on':'off'}"></div>
+      <p class="font-bold">${p.nama}</p>
+      <button onclick="toggleProduk('${p.nama}')" class="toggle-btn ${p.on?'bg-green-600':'bg-red-600'}">
+        ${p.on?'ON':'OFF'}
+      </button>
+    </div>`;
+  });
+  document.getElementById('totalOn').innerText = totalOn;
+  document.getElementById('totalOff').innerText = produkData.length - totalOn;
+}
 
 function renderProduk(){
   const wrap = document.getElementById('produkList');
   wrap.innerHTML = '';
-  PRODUK.forEach(p=>{
-    wrap.innerHTML += `<button type="button" onclick="pilihProduk('${p}')" class="produk-btn">${p}</button>`;
+  produkData.filter(p=>p.on).forEach(p=>{
+    wrap.innerHTML += `<button type="button" onclick="pilihProduk('${p.nama}')" class="produk-btn">${p.nama}</button>`;
   });
 }
+
 function pilihProduk(p){
   produkPilih = p; document.getElementById('produk').value = p;
   document.querySelectorAll('.produk-btn').forEach(b=>b.classList.remove('active'));
   event.target.classList.add('active');
 }
-
-function save(){ localStorage.setItem('panel_orders_v6_1', JSON.stringify(orders)); render(); }
 
 function tambahOrder(){
   const nama = document.getElementById('nama').value;
@@ -139,7 +185,6 @@ function copyKey(key){
   alert('✅ Key berhasil di copy: ' + key);
 }
 
-// FORMAT WA BARU + EMOJI
 function prosesWA(id){
   const o = orders.find(x=>x.id==id); o.status='proses';
   const nomor = '62' + o.nohp.replace(/[^0-9]/g,'').replace(/^0/, '');
@@ -160,21 +205,14 @@ function selesaiWA(id){
 function hapus(id){ if(confirm('Yakin hapus?')){ orders = orders.filter(x=>x.id!=id); save(); } }
 
 function hapusSemua(){
-  if(confirm('YAKIN MAU HAPUS SEMUA DATA? DATA TIDAK BISA DIKEMBALIKAN!')){
-    orders = []; save();
-    alert('✅ Semua data berhasil dihapus');
-  }
+  if(confirm('YAKIN MAU HAPUS SEMUA DATA?')){ orders = []; save(); alert('✅ Semua data berhasil dihapus'); }
 }
 
 function exportExcel(){
   if(orders.length == 0){ alert('Belum ada data untuk di export'); return; }
   const data = orders.map(o => ({
-    'Tanggal': o.tanggal,
-    'Nama': o.nama,
-    'No WA': o.nohp,
-    'Produk': o.produk,
-    'Key': o.key || '-',
-    'Status': o.status
+    'Tanggal': o.tanggal, 'Nama': o.nama, 'No WA': o.nohp,
+    'Produk': o.produk, 'Key': o.key || '-', 'Status': o.status
   }));
   const ws = XLSX.utils.json_to_sheet(data);
   const wb = XLSX.utils.book_new();
@@ -191,11 +229,7 @@ function render(){
     o.nama.toLowerCase().includes(search) || 
     o.produk.toLowerCase().includes(search)
   );
-
-  // TOTAL PENJUALAN
   document.getElementById('totalAll').innerText = orders.length;
-  document.getElementById('totalProses').innerText = orders.filter(o=>o.status=='proses').length;
-  document.getElementById('totalSelesai').innerText = orders.filter(o=>o.status=='selesai').length;
 
   if(data.length==0){ wrap.innerHTML='<p class="text-gray-400 text-center">Data tidak ditemukan</p>'; return; }
   wrap.innerHTML='';
