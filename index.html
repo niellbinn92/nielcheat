@@ -7,8 +7,6 @@
 <script src="https://cdn.tailwindcss.com"></script>
 <script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
 <link rel="icon" href="logo.png" type="image/png">
-<link rel="apple-touch-icon" href="logo.png">
-<meta name="theme-color" content="#2563EB">
 <link href="https://fonts.googleapis.com/css2?family=Poppins:wght@600;700;800&family=Orbitron:wght@700;900&display=swap" rel="stylesheet">
 <style>
 body{font-family:'Poppins', sans-serif;color:#fff;overflow-x:hidden;background:#050A14;}
@@ -30,6 +28,7 @@ h1,h2{font-family:'Orbitron', sans-serif;}
 .btn-hapus{background:#EF4444}
 .btn-copy{background:#8B5CF6}
 .btn-excel{background:#16A34A}
+.btn-broadcast{background:#2563EB}
 .btn-danger{background:#DC2626;width:100%}
 .produk-btn{background:#1E293B;border:1px solid #2563EB;padding:8px 12px;border-radius:8px;margin:4px;cursor:pointer;font-size:14px}
 .produk-btn.active{background:#2563EB;box-shadow:0 0 10px #2563EB}
@@ -38,8 +37,6 @@ h1,h2{font-family:'Orbitron', sans-serif;}
 .proses{background:#3B82F630;color:#3B82F6}
 .selesai{background:#10B98130;color:#10B981}
 .stat-box{background:#1E293B;border:1px solid #2563EB;border-radius:12px;padding:12px;text-align:center}
-
-/* INDIKATOR ON OFF */
 .produk-card{position:relative;background:#1E293B;border:2px solid #2563EB;border-radius:12px;padding:10px}
 .indicator{position:absolute;top:8px;right:8px;width:12px;height:12px;border-radius:50%;}
 .indicator.on{background:#10B981;animation:blink 1.2s infinite;}
@@ -75,8 +72,6 @@ h1,h2{font-family:'Orbitron', sans-serif;}
     <!-- MANAJEMEN PRODUK -->
     <div class="card">
       <h2 class="font-bold mb-3">⚙️ Atur Status Produk</h2>
-      
-      <!-- TOMBOL FILTER BARU -->
       <div class="flex gap-2 overflow-x-auto pb-2 mb-3">
         <button id="btn-all" class="filter-btn-panel active" onclick="filterPanel('semua')">SEMUA</button>
         <button id="btn-freefire" class="filter-btn-panel" onclick="filterPanel('FREE FIRE')">FREE FIRE</button>
@@ -84,7 +79,6 @@ h1,h2{font-family:'Orbitron', sans-serif;}
         <button id="btn-8ball" class="filter-btn-panel" onclick="filterPanel('8 BALL')">8 BALL</button>
         <button id="btn-sertifikat" class="filter-btn-panel" onclick="filterPanel('SERTIFIKAT IOS')">SERTIFIKAT IOS</button>
       </div>
-
       <div id="produkManager" class="grid grid-cols-2 gap-2"></div>
     </div>
 
@@ -93,25 +87,24 @@ h1,h2{font-family:'Orbitron', sans-serif;}
       <h2 class="font-bold mb-3">+ Tambah Pesanan Baru</h2>
       <input id="nama" type="text" placeholder="Nama Pembeli" class="input">
       <input id="nohp" type="text" placeholder="No WA 08xxx" class="input">
-      
       <p class="mb-2 font-semibold">Pilih Produk:</p>
       <div id="produkList" class="flex flex-wrap mb-3"></div>
       <input id="produk" type="hidden">
-      
       <input id="key" type="text" placeholder="Key / Kode - isi nanti saat selesai" class="input">
       <button onclick="tambahOrder()" class="btn btn-tambah">SIMPAN PESAN</button>
     </div>
 
-    <!-- SEARCH + EXPORT + HAPUS SEMUA -->
+    <!-- SEARCH + EXPORT + BROADCAST + HAPUS SEMUA -->
     <div class="card">
       <input id="searchInput" type="text" onkeyup="render()" placeholder="🔍 Cari berdasarkan No WA / Nama / Produk" class="input mb-2">
-      <div class="grid grid-cols-2 gap-2">
-        <button onclick="exportExcel()" class="btn btn-excel">📊 EXPORT EXCEL</button>
-        <button onclick="hapusSemua()" class="btn btn-danger">🗑️ HAPUS SEMUA</button>
+      <div class="grid grid-cols-3 gap-2">
+        <button onclick="exportExcel()" class="btn btn-excel">📊 EXCEL</button>
+        <button onclick="broadcastWA()" class="btn btn-broadcast">📢 BROADCAST</button>
+        <button onclick="hapusSemua()" class="btn btn-danger">🗑️ HAPUS</button>
       </div>
     </div>
 
-    <!-- LIST PESANAN -->
+    <!-- LIST PESAN -->
     <h2 class="font-bold mb-3">Daftar Pesanan</h2>
     <div id="listOrder"></div>
     <button onclick="logout()" class="btn bg-red-600 w-full mt-4">LOGOUT</button>
@@ -120,7 +113,8 @@ h1,h2{font-family:'Orbitron', sans-serif;}
 
 <script>
 const PASS_ADMIN = "220230";
-
+const LINK_GRUP = "https://chat.whatsapp.com/I3BS5SHHTmHAms0r8Augvw"; // GANTI LINK GRUP KAMU
+const LINK_SALURAN = "https://whatsapp.com/channel/0029VbCXLJx9hXF9QRZdRr12";
 let produkData = JSON.parse(localStorage.getItem('produk_status_v9')) || [
   {nama:"migul", on:true, game:"FREE FIRE"},
   {nama:"hg proxy", on:true, game:"FREE FIRE"}, 
@@ -143,7 +137,7 @@ let produkData = JSON.parse(localStorage.getItem('produk_status_v9')) || [
 
 let orders = JSON.parse(localStorage.getItem('panel_orders_v9')) || [];
 let produkPilih = '';
-let filterAktif = 'semua'; // default filter
+let filterAktif = 'semua';
 
 function loginAdmin(){
   if(document.getElementById('passAdmin').value == PASS_ADMIN){
@@ -161,27 +155,21 @@ function toggleProduk(nama){
   p.on = !p.on; saveProduk(); renderProdukManager(); renderProduk();
 }
 
-// FUNGSI FILTER BARU
 function filterPanel(game){
   filterAktif = game;
   document.querySelectorAll('.filter-btn-panel').forEach(b=>b.classList.remove('active'));
-  document.getElementById('btn-'+game.toLowerCase().replace(' ', '')).classList.add('active');
+  document.getElementById('btn-'+game.toLowerCase().replace(/ /g, '')).classList.add('active');
   renderProdukManager();
 }
 
-// MANAGER PRODUK DENGAN FILTER
 function renderProdukManager(){
   const wrap = document.getElementById('produkManager');
   wrap.innerHTML = '';
-  let totalOn = 0;
-  
   let dataFilter = produkData;
   if(filterAktif != 'semua'){
     dataFilter = produkData.filter(p => p.game == filterAktif);
   }
-
   dataFilter.forEach(p=>{
-    if(p.on) totalOn++;
     wrap.innerHTML += `
     <div class="produk-card">
       <div class="indicator ${p.on?'on':'off'}"></div>
@@ -240,15 +228,12 @@ function selesaiWA(id){
   if(!keyBaru){ alert('Isi key dulu!'); return; }
   o.status='selesai'; o.key=keyBaru;
   const nomor = '62' + o.nohp.replace(/[^0-9]/g,'').replace(/^0/, '');
-  const pesan = `Halo ya 👋😁%0A%0APesanan *${o.produk}* SUDAH SELESAI ✅🎉%0A%0A🔑 KEY: \`${keyBaru}\`%0A⚠️ NOTE: JANGAN BERIKAN KEY KEPADA SIAPUN%0A1 KEY UNTUK 1 HP/DEVICE SAJA ‼️%0A%0ASilahkan digunakan. Terima kasih 🙏💙%0A%0A     🟢 Admin NIELofc`;
+  const pesan = `✅ *PESAN SELESAI* ✅%0A%0A*Produk:* ${o.produk}%0A*KEY AKTIF:* \`${keyBaru}\`%0A%0A⚠️ *NOTE PENTING:*%0A1 KEY UNTUK 1 HP/DEVICE SAJA ‼️%0AJANGAN BERIKAN KEY KEPADA SIAPUN%0A%0A📢 *Join Grup Update:*%0A${LINK_GRUP}%0A%0A📢 *Follow Saluran Info:*%0A${LINK_SALURAN}%0A%0ATerima kasih sudah order di NIELofc 🙏💙`;
   window.open(`https://wa.me/${nomor}?text=${pesan}`, '_blank'); save();
 }
 
 function hapus(id){ if(confirm('Yakin hapus?')){ orders = orders.filter(x=>x.id!=id); save(); } }
-
-function hapusSemua(){
-  if(confirm('YAKIN MAU HAPUS SEMUA DATA?')){ orders = []; save(); alert('✅ Semua data berhasil dihapus'); }
-}
+function hapusSemua(){ if(confirm('YAKIN MAU HAPUS SEMUA DATA?')){ orders = []; save(); alert('✅ Semua data berhasil dihapus'); } }
 
 function exportExcel(){
   if(orders.length == 0){ alert('Belum ada data untuk di export'); return; }
@@ -261,6 +246,26 @@ function exportExcel(){
   XLSX.utils.book_append_sheet(wb, ws, "Data Pesanan");
   XLSX.writeFile(wb, `Data-Pesanan-NIELofc-${new Date().toISOString().slice(0,10)}.xlsx`);
   alert('✅ File Excel berhasil di download');
+}
+
+// FUNGSI BARU: BROADCAST KE SEMUA BUYER
+function broadcastWA(){
+  if(orders.length == 0){ alert('Belum ada data buyer'); return; }
+  
+  let pesan = prompt("Masukkan pesan broadcast:", "🔥 INFO PENTING 🔥\n\nRestock key baru sudah masuk!\nCek panel sekarang ya bosku 🙏\n\nAdmin NIELofc");
+  
+  if(pesan == null || pesan == "") return;
+
+  let uniqueNomor = [...new Set(orders.map(o => '62' + o.nohp.replace(/[^0-9]/g,'').replace(/^0/, '')))];
+  
+  alert(`Akan membuka WA untuk ${uniqueNomor.length} nomor. Kirim pelan2 ya bos biar aman`);
+
+  uniqueNomor.forEach((nomor, i) => {
+    setTimeout(() => {
+      let url = `https://wa.me/${nomor}?text=${encodeURIComponent(pesan)}`;
+      window.open(url, '_blank');
+    }, i * 2000); // jeda 2 detik biar ga kena spam
+  });
 }
 
 function render(){
@@ -287,7 +292,7 @@ function render(){
       ${o.key ? `<div class="flex gap-2 mt-1 items-center"><p class="text-sm text-green-400">Key: ${o.key}</p><button onclick="copyKey('${o.key}')" class="btn btn-copy text-xs px-2 py-1">COPY</button></div>` : ''}
       <div class="mt-3 space-y-2">
         ${o.status=='pending'? `<button onclick="prosesWA(${o.id})" class="btn btn-proses">1. PROSES + KIRIM WA</button>` : ''}
-        ${o.status!='selesai'? `<input id="keyInput${o.id}" type="text" placeholder="Tempel Key Disini" class="input"><button onclick="selesaiWA(${o.id})" class="btn btn-selesai">2. SELESAI + KIRIM KEY WA</button>` : ''}
+        ${o.status!='selesai'? `<input id="keyInput${o.id}" type="text" placeholder="Tempel Key Disini" class="input"><button onclick="selesaiWA(${o.id})" class="btn btn-selesai">2. SELESAI + KIRIM KEY + LINK</button>` : ''}
         <a href="https://wa.me/${nomor}" target="_blank" class="btn" style="background:#22C55E;display:block;text-align:center">CHAT LANGSUNG</a>
         <button onclick="hapus(${o.id})" class="btn btn-hapus w-full">HAPUS</button>
       </div>
