@@ -113,8 +113,9 @@ h1,h2{font-family:'Orbitron', sans-serif;}
 
 <script>
 const PASS_ADMIN = "220230";
-const LINK_GRUP = "https://chat.whatsapp.com/I3BS5SHHTmHAms0r8Augvw"; // GANTI LINK GRUP KAMU
+const LINK_GRUP = "https://chat.whatsapp.com/I3BS5SHHTmHAms0r8Augvw"; 
 const LINK_SALURAN = "https://whatsapp.com/channel/0029VbCXLJx9hXF9QRZdRr12";
+
 let produkData = JSON.parse(localStorage.getItem('produk_status_v9')) || [
   {nama:"migul", on:true, game:"FREE FIRE"},
   {nama:"hg proxy", on:true, game:"FREE FIRE"}, 
@@ -248,7 +249,7 @@ function exportExcel(){
   alert('✅ File Excel berhasil di download');
 }
 
-// FUNGSI BARU: BROADCAST KE SEMUA BUYER
+// FUNGSI BROADCAST VERSI AMAN 1 PER 1
 function broadcastWA(){
   if(orders.length == 0){ alert('Belum ada data buyer'); return; }
   
@@ -258,14 +259,28 @@ function broadcastWA(){
 
   let uniqueNomor = [...new Set(orders.map(o => '62' + o.nohp.replace(/[^0-9]/g,'').replace(/^0/, '')))];
   
-  alert(`Akan membuka WA untuk ${uniqueNomor.length} nomor. Kirim pelan2 ya bos biar aman`);
+  let i = 0;
+  function kirimBerikutnya(){
+    if(i >= uniqueNomor.length){
+      alert("✅ Selesai broadcast ke " + uniqueNomor.length + " nomor");
+      return;
+    }
 
-  uniqueNomor.forEach((nomor, i) => {
+    let nomor = uniqueNomor[i];
+    let url = `https://wa.me/${nomor}?text=${encodeURIComponent(pesan)}`;
+    window.open(url, '_blank');
+
+    i++;
     setTimeout(() => {
-      let url = `https://wa.me/${nomor}?text=${encodeURIComponent(pesan)}`;
-      window.open(url, '_blank');
-    }, i * 2000); // jeda 2 detik biar ga kena spam
-  });
+      if(confirm(`Sudah kirim ke ${i}/${uniqueNomor.length} orang. \n\nKlik OK untuk lanjut ke nomor berikutnya`)){
+        kirimBerikutnya();
+      } else {
+        alert("Broadcast dihentikan di nomor ke " + i);
+      }
+    }, 1500);
+  }
+  alert(`Akan kirim ke ${uniqueNomor.length} nomor.\n\nTips: Kirim > Balik ke panel > Klik OK > Ulangi`);
+  kirimBerikutnya();
 }
 
 function render(){
