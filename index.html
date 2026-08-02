@@ -40,11 +40,14 @@ h1,h2{font-family:'Orbitron', sans-serif;}
 .stat-box{background:#1E293B;border:1px solid #2563EB;border-radius:12px;padding:12px;text-align:center}
 
 /* INDIKATOR ON OFF */
-.produk-card{position:relative;background:#1E293B;border:2px solid #2563EB;border-radius:12px;padding:10px;margin-bottom:12px}
+.produk-card{position:relative;background:#1E293B;border:2px solid #2563EB;border-radius:12px;padding:10px}
 .indicator{position:absolute;top:8px;right:8px;width:12px;height:12px;border-radius:50%;}
 .indicator.on{background:#10B981;animation:blink 1.2s infinite;}
 .indicator.off{background:#EF4444;animation:blinkOff 1.2s infinite;}
 .toggle-btn{font-size:11px;padding:4px 8px;border-radius:6px;margin-top:6px}
+.game-tag{font-size:10px;padding:2px 6px;border-radius:6px;background:#2563EB30;color:#3B82F6;font-weight:700}
+.filter-btn-panel{background:#1E293B;padding:8px 14px;border-radius:20px;font-size:12px;font-weight:800;white-space:nowrap;border:1px solid #2563EB;cursor:pointer}
+.filter-btn-panel.active{background:#2563EB;color:#fff;box-shadow:0 0 8px #2563EB}
 </style>
 </head>
 <body>
@@ -72,7 +75,17 @@ h1,h2{font-family:'Orbitron', sans-serif;}
     <!-- MANAJEMEN PRODUK -->
     <div class="card">
       <h2 class="font-bold mb-3">⚙️ Atur Status Produk</h2>
-      <div id="produkManager" class="space-y-2"></div>
+      
+      <!-- TOMBOL FILTER BARU -->
+      <div class="flex gap-2 overflow-x-auto pb-2 mb-3">
+        <button id="btn-all" class="filter-btn-panel active" onclick="filterPanel('semua')">SEMUA</button>
+        <button id="btn-freefire" class="filter-btn-panel" onclick="filterPanel('FREE FIRE')">FREE FIRE</button>
+        <button id="btn-pubg" class="filter-btn-panel" onclick="filterPanel('PUBG')">PUBG</button>
+        <button id="btn-8ball" class="filter-btn-panel" onclick="filterPanel('8 BALL')">8 BALL</button>
+        <button id="btn-sertifikat" class="filter-btn-panel" onclick="filterPanel('SERTIFIKAT IOS')">SERTIFIKAT IOS</button>
+      </div>
+
+      <div id="produkManager" class="grid grid-cols-2 gap-2"></div>
     </div>
 
     <!-- FORM PESAN -->
@@ -108,15 +121,29 @@ h1,h2{font-family:'Orbitron', sans-serif;}
 <script>
 const PASS_ADMIN = "220230";
 
-let produkData = JSON.parse(localStorage.getItem('produk_status_v7')) || [
-  {nama:"migul", on:true}, {nama:"hg proxy", on:true}, {nama:"silent cheat", on:true}, 
-  {nama:"drip", on:true}, {nama:"fluorite", on:false}, 
-  {nama:"gbox/esing", on:true}, {nama:"king mod", on:false}, 
-  {nama:"solana hax", on:true}, {nama:"migul proxy", on:true}, {nama:"drip proxy", on:true}
+let produkData = JSON.parse(localStorage.getItem('produk_status_v9')) || [
+  {nama:"migul", on:true, game:"FREE FIRE"},
+  {nama:"hg proxy", on:true, game:"FREE FIRE"}, 
+  {nama:"silent cheat", on:true, game:"FREE FIRE"},
+  {nama:"drip", on:true, game:"FREE FIRE"}, 
+  {nama:"fluorite", on:false, game:"FREE FIRE"},
+  {nama:"gbox/esing", on:true, game:"SERTIFIKAT IOS"}, 
+  {nama:"king mod", on:false, game:"PUBG"},
+  {nama:"solana hax", on:true, game:"PUBG"}, 
+  {nama:"migul proxy", on:true, game:"FREE FIRE"}, 
+  {nama:"drip proxy", on:true, game:"FREE FIRE"},
+  {nama:"hg apk mod", on:true, game:"FREE FIRE"},
+  {nama:"prime hook", on:true, game:"FREE FIRE"},
+  {nama:"fluorite 8ball", on:true, game:"8 BALL"},
+  {nama:"king of shots basic", on:true, game:"8 BALL"},
+  {nama:"king of shots mod", on:true, game:"8 BALL"},
+  {nama:"king of shots premium", on:true, game:"8 BALL"},
+  {nama:"wizard 8ball", on:true, game:"8 BALL"}
 ];
 
-let orders = JSON.parse(localStorage.getItem('panel_orders_v7')) || [];
+let orders = JSON.parse(localStorage.getItem('panel_orders_v9')) || [];
 let produkPilih = '';
+let filterAktif = 'semua'; // default filter
 
 function loginAdmin(){
   if(document.getElementById('passAdmin').value == PASS_ADMIN){
@@ -126,39 +153,54 @@ function loginAdmin(){
   } else { alert('Password salah!'); }
 }
 function logout(){ location.reload(); }
-function saveProduk(){ localStorage.setItem('produk_status_v7', JSON.stringify(produkData)); }
-function save(){ localStorage.setItem('panel_orders_v7', JSON.stringify(orders)); render(); }
+function saveProduk(){ localStorage.setItem('produk_status_v9', JSON.stringify(produkData)); }
+function save(){ localStorage.setItem('panel_orders_v9', JSON.stringify(orders)); render(); }
 
 function toggleProduk(nama){
   const p = produkData.find(x=>x.nama==nama);
   p.on = !p.on; saveProduk(); renderProdukManager(); renderProduk();
 }
 
-// MANAGER PRODUK DENGAN LAMPU
+// FUNGSI FILTER BARU
+function filterPanel(game){
+  filterAktif = game;
+  document.querySelectorAll('.filter-btn-panel').forEach(b=>b.classList.remove('active'));
+  document.getElementById('btn-'+game.toLowerCase().replace(' ', '')).classList.add('active');
+  renderProdukManager();
+}
+
+// MANAGER PRODUK DENGAN FILTER
 function renderProdukManager(){
   const wrap = document.getElementById('produkManager');
   wrap.innerHTML = '';
   let totalOn = 0;
-  produkData.forEach(p=>{
+  
+  let dataFilter = produkData;
+  if(filterAktif != 'semua'){
+    dataFilter = produkData.filter(p => p.game == filterAktif);
+  }
+
+  dataFilter.forEach(p=>{
     if(p.on) totalOn++;
     wrap.innerHTML += `
     <div class="produk-card">
       <div class="indicator ${p.on?'on':'off'}"></div>
-      <p class="font-bold">${p.nama}</p>
-      <button onclick="toggleProduk('${p.nama}')" class="toggle-btn ${p.on?'bg-green-600':'bg-red-600'}">
+      <p class="font-bold text-sm">${p.nama}</p>
+      <span class="game-tag">${p.game}</span>
+      <button onclick="toggleProduk('${p.nama}')" class="toggle-btn ${p.on?'bg-green-600':'bg-red-600'} w-full">
         ${p.on?'ON':'OFF'}
       </button>
     </div>`;
   });
-  document.getElementById('totalOn').innerText = totalOn;
-  document.getElementById('totalOff').innerText = produkData.length - totalOn;
+  document.getElementById('totalOn').innerText = produkData.filter(p=>p.on).length;
+  document.getElementById('totalOff').innerText = produkData.filter(p=>!p.on).length;
 }
 
 function renderProduk(){
   const wrap = document.getElementById('produkList');
   wrap.innerHTML = '';
   produkData.filter(p=>p.on).forEach(p=>{
-    wrap.innerHTML += `<button type="button" onclick="pilihProduk('${p.nama}')" class="produk-btn">${p.nama}</button>`;
+    wrap.innerHTML += `<button type="button" onclick="pilihProduk('${p.nama}')" class="produk-btn">${p.nama} <span class="text-xs text-cyan-400">[${p.game}]</span></button>`;
   });
 }
 
